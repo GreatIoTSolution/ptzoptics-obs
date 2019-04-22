@@ -232,7 +232,7 @@ private:
     void addToQue(char* command , int byteSize , COMMAND_TYPE type);
     void moveToNextCommand();
     void executeCommand(COMMAND* com);
-private slots:
+public slots:
 
     void autoFocusClick();
     void onConnectToCamera();
