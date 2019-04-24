@@ -37,6 +37,7 @@ bool obs_module_load(void)
 	action->connect(action, &QAction::triggered, menu_cb);
 
 	obs_frontend_add_preload_callback(registerPTZHotkeys, NULL);
+	obs_frontend_add_save_callback(savePTZHotkeys, NULL);
 	
 	return true;
 }
@@ -147,7 +148,9 @@ void savePTZHotkeys(obs_data_t *save_data, bool saving, void *private_data)
 
 void ptzHotkeyCallback(void *data, obs_hotkey_id id, obs_hotkey_t *hotkey, bool pressed)
 {
-	if (pressed && ptzMainWindow)
+	if (ptzMainWindow == NULL || !ptzMainWindow->isActiveWindow())
+		return;
+	if (pressed)
 	{
 		if (id == upHotkeyId)
 		{
