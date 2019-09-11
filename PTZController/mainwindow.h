@@ -48,10 +48,13 @@ public:
     void showCompactView();
     void showAdvancedView();
     void setWindowSize(int w_width , int w_height);
+    QString getCurrentCameraIp();
+    bool getIsControllable();
+    QSettings *getAppSettings();
 
-protected:
-    void keyPressEvent(QKeyEvent *ev);
-    void keyReleaseEvent(QKeyEvent *ev);
+//protected:
+//    void keyPressEvent(QKeyEvent *ev);
+//    void keyReleaseEvent(QKeyEvent *ev);
 
 private:
 
@@ -63,6 +66,7 @@ private:
     //for download
 //    QNetworkRequest *request;
     QNetworkAccessManager *downLoadManager;
+    QNetworkAccessManager *devNameGetter;
 
     //command que
     QList<COMMAND*> commandQue;
@@ -211,23 +215,30 @@ private:
 
     void speedByZoom();
 
-    void focusLock();
-
+    //newly added 08/19
+public:
+    void focusLock(bool lock);
+    void setPanTiltLimit(int panLeftLimit, int panRightLimit, int tiltDownLimit, int tiltUpLimit);
+    void clearLimits(bool upright);
+    void setCallPresetSpeed(int speed);
+private:
     void initConnection();
 
     void statusBarToggle();
 
     //newly added
+
     void setSettings(QString curIp, QString settingKey , QVariant value);
     void loadSettings(QString curIp);
 
     //newly added
-    void savePresetSettings(int presetNum);
+    void savePresetSettings(int presetNum, QString presetText);
     void loadPresetSettings(int presetNum , int loadingStep);
 
     //newly added
+public:
     void showMessage(QString str);
-
+private:
     //newly added
     void addToQue(char* command , int byteSize , COMMAND_TYPE type);
     void moveToNextCommand();
@@ -339,6 +350,11 @@ public slots:
     void onImageMirror();
 
     void onAboutUsClicked();
+    //newly added 08/19
+    void onPanTiltLimitSettingClicked();
+    void onXboxHelpClicked();
+    void onHotkeyHelpClicked();
+    void returnRecallMode();
 
     void onMultiCameraClicked();
 
@@ -380,11 +396,16 @@ public slots:
     void onHueChangeTriggered(bool increase);
     void onCallPreset(int presetNum);
     void onSwitchCamera(int cameraNum);
+    //newly added: 07/2019
+    void onGetName(QNetworkReply *reply);
+    QString processReply(QString str);
 
 private:
     Ui::MainWindow *ui;
     COMMAND_TYPE currentCommandType = Command;
     bool log(QString str);
+    //newly added: 07/2019
+    void sendDevNameRequest();
 
 };
 

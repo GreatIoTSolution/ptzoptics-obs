@@ -1090,12 +1090,9 @@ QPushButton:pressed{
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="presetText">
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <property name="placeholderText">
-                 <string>Preset name goes here.</string>
+               <widget class="QCheckBox" name="lockFocus">
+                <property name="text">
+                 <string>Lock Focus</string>
                 </property>
                </widget>
               </item>
@@ -1304,6 +1301,13 @@ QPushButton:pressed{
                </widget>
               </item>
              </layout>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="storeExposure">
+              <property name="text">
+               <string>Store exposure settings with each PTZ preset</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>
@@ -2197,6 +2201,7 @@ QPushButton:pressed{
     </property>
     <addaction name="actionMultiCameras"/>
     <addaction name="actionJoyStick"/>
+    <addaction name="actionPanTiltLimitSetting"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -2212,6 +2217,9 @@ QPushButton:pressed{
      <string>Help</string>
     </property>
     <addaction name="actionAboutUs"/>
+    <addaction name="actionXBbox"/>
+    <addaction name="actionHotkey"/>
+    <addaction name="actionHelp"/>
    </widget>
    <addaction name="menuMenu"/>
    <addaction name="menuView"/>
@@ -2261,6 +2269,26 @@ QPushButton:pressed{
   <action name="actionJoyStick">
    <property name="text">
     <string>Additional Input Setting</string>
+   </property>
+  </action>
+  <action name="actionPanTiltLimitSetting">
+   <property name="text">
+    <string>Pan/Tilt Limit Setting</string>
+   </property>
+  </action>
+  <action name="actionXBbox">
+   <property name="text">
+    <string>XBox</string>
+   </property>
+  </action>
+  <action name="actionHotkey">
+   <property name="text">
+    <string>Hotkey</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>Help</string>
    </property>
   </action>
  </widget>

@@ -5,16 +5,25 @@
 #include <QTimer>
 #include <QDesktopWidget>
 #include <QScreen>
+//newly added 07/19
+#include <QInputDialog>
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "aboutus.h"
+//newly added 07/19
+#include "xboxhelp.h"
+#include "hotkeyhelp.h"
+#include "pantiltlimitdlg.h"
+
 #include "multicameras.h"
 #include "joystickdlg.h"
 
 #include <qt_windows.h>
 
 
-QLabel *panStatus, *tiltStatus, *zoomStatus , *focusStatus , *shutterStatus, *irisStatus , *brightStatus , *onlineStatus , *hueStatus , *luminanceStatus , *contrastStatus /*,*rGainStatus , *bGainStatus*/;
+//QLabel *panStatus, *tiltStatus, *zoomStatus , *focusStatus , *shutterStatus, *irisStatus , *brightStatus , *onlineStatus , *hueStatus , *luminanceStatus , *contrastStatus /*,*rGainStatus , *bGainStatus*/;
+QLabel *onlineStatus, *devNameLabel;
 int getStatusStep = 0;//this variable is used only when get camera info every 1 sec...
 //bulk query do not need this variable
 
@@ -173,6 +182,8 @@ MainWindow::MainWindow(QWidget *parent) :
     //newly added
     connect(ui->zoomSpeed , SIGNAL(currentIndexChanged(int)) , this , SLOT(onZoomSpeedChanged(int)));
     connect(ui->focusSpeed , SIGNAL(currentIndexChanged(int)) , this , SLOT(onFocusSpeedChanged(int)));
+    //newly added 08/19
+    connect(ui->lockFocus, SIGNAL(pressed()), this, SLOT(onFocusLockClicked()));
 
 
     connect(ui->luminanceSlider , SIGNAL(valueChanged(int)) , this , SLOT(onLuminanceSliderMoved(int)));
@@ -277,40 +288,51 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionMultiCameras, SIGNAL(triggered(bool)), this, SLOT(onMultiCameraClicked()));
     connect(ui->actionJoyStick , SIGNAL(triggered(bool)) , this , SLOT(onJoyStickClicked()));
     connect(ui->actionAboutUs, SIGNAL(triggered(bool)), this, SLOT(onAboutUsClicked()));
+    //newly added 08/19
+    connect(ui->actionHotkey, SIGNAL(triggered(bool)), this, SLOT(onHotkeyHelpClicked()));
+    connect(ui->actionXBbox, SIGNAL(triggered(bool)), this, SLOT(onXboxHelpClicked()));
+    connect(ui->actionPanTiltLimitSetting, SIGNAL(triggered(bool)), this, SLOT(onPanTiltLimitSettingClicked()));
     connect(ui->actionCompactMode , SIGNAL(triggered(bool)) , this , SLOT(onCompactViewClicked()));
     connect(ui->actionAdvancedMode , SIGNAL(triggered(bool)) , this , SLOT(onAdvancedViewClicked()));
     connect(ui->actionStatusBar , SIGNAL(triggered(bool)) , this , SLOT(onStatusBarToggle()));
     /*menu settings end*/
 
     /*set statusbar begin*/
-    panStatus = new QLabel();
-    tiltStatus = new QLabel();
-    zoomStatus = new QLabel();
-    focusStatus = new QLabel();
-    shutterStatus = new QLabel();
-    irisStatus = new QLabel();
-    brightStatus = new QLabel();
+//    panStatus = new QLabel();
+//    tiltStatus = new QLabel();
+//    zoomStatus = new QLabel();
+//    focusStatus = new QLabel();
+//    shutterStatus = new QLabel();
+//    irisStatus = new QLabel();
+//    brightStatus = new QLabel();
+//    onlineStatus = new QLabel();
+//    luminanceStatus = new QLabel();
+//    hueStatus = new QLabel();
+//    contrastStatus = new QLabel();
     onlineStatus = new QLabel();
-    luminanceStatus = new QLabel();
-    hueStatus = new QLabel();
-    contrastStatus = new QLabel();
+    devNameLabel = new QLabel();
 //    rGainStatus = new QLabel();
 //    bGainStatus = new QLabel();
-    ui->statusBar->addPermanentWidget(panStatus, 1);
-    ui->statusBar->addPermanentWidget(tiltStatus, 1);
-    ui->statusBar->addPermanentWidget(zoomStatus, 1);
-    ui->statusBar->addPermanentWidget(focusStatus , 1);
-    ui->statusBar->addPermanentWidget(shutterStatus, 1);
-    ui->statusBar->addPermanentWidget(irisStatus, 1);
-    ui->statusBar->addPermanentWidget(brightStatus , 1);
-    ui->statusBar->addPermanentWidget(luminanceStatus , 1);
-    ui->statusBar->addPermanentWidget(contrastStatus , 1);
-    ui->statusBar->addPermanentWidget(hueStatus , 1);
+//    ui->statusBar->addPermanentWidget(panStatus, 1);
+//    ui->statusBar->addPermanentWidget(tiltStatus, 1);
+//    ui->statusBar->addPermanentWidget(zoomStatus, 1);
+//    ui->statusBar->addPermanentWidget(focusStatus , 1);
+//    ui->statusBar->addPermanentWidget(shutterStatus, 1);
+//    ui->statusBar->addPermanentWidget(irisStatus, 1);
+//    ui->statusBar->addPermanentWidget(brightStatus , 1);
+//    ui->statusBar->addPermanentWidget(luminanceStatus , 1);
+//    ui->statusBar->addPermanentWidget(contrastStatus , 1);
+//    ui->statusBar->addPermanentWidget(hueStatus , 1);
 //    ui->statusBar->addPermanentWidget(rGainStatus , 1);
 //    ui->statusBar->addPermanentWidget(bGainStatus , 1);
+    ui->statusBar->addPermanentWidget(devNameLabel, 3);
     ui->statusBar->addPermanentWidget(onlineStatus, 1);
+
     ui->statusBar->hide();
+    devNameLabel->setText("Getting device name...");
+    devNameLabel->setAlignment(Qt::AlignRight);
     onlineStatus->setText("offline");
+    onlineStatus->setAlignment(Qt::AlignRight);
     /*set statusbar end*/
 
     /*initializing camera variable begin*/
@@ -387,6 +409,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(downLoadManager , SIGNAL(finished(QNetworkReply*)) , this , SLOT(onFileDownloaded(QNetworkReply*)));
     /*for snapshot download end*/
 
+    //newly added 08/19
+    /*for get name begin*/
+    devNameGetter = new QNetworkAccessManager(this);
+    connect(devNameGetter , SIGNAL(finished(QNetworkReply*)) , this , SLOT(onGetName(QNetworkReply*)));
+    /*for get name end*/
+
     initialWidth = this->width();
     initialHeight = this->height();
     centerH = QApplication::desktop()->screenGeometry().height() / 2;
@@ -434,6 +462,7 @@ void MainWindow::onClientConnected()
     /*set initial values speedByzoom , focusLock , MorePresetButton*/
     initConnection();
     onlineStatus->setText("online");
+    sendDevNameRequest();
 }
 void MainWindow::onClientDisconnected()
 {
@@ -455,6 +484,7 @@ void MainWindow::onClientDisconnected()
     startFlag = 2;
     getStatusStep = 0;
     onlineStatus->setText("offline");
+    devNameLabel->setText("Getting device name...");
 }
 
 void MainWindow::onMoveLeft()
@@ -587,11 +617,20 @@ void MainWindow::onMem1Clicked()
     {
         if (isPresetMode)
         {
+
             QNetworkReply *reply = downLoadManager->get(QNetworkRequest(QUrl("http://" + currentCamIp + DOWNLOAD_FILE_URI)));
             downloadDestination[reply] = new QFile(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QString::asprintf("%s" , (DOWNLOAD_FILE_DEST_PREFIX)) + currentCamIp + QString::number(1) + ".jpg");
-            ui->mem1->setText(ui->presetText->text().left(10));
-            savePresetSettings(1);
             setPreset(1);
+            //newly added: 07/2019
+            bool ok;
+            QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
+                                                     tr("Preset #1 Name:"), QLineEdit::Normal,
+                                                    ui->mem1->text(), &ok);
+            if (!ok || presetText.isEmpty())
+                presetText = ui->mem1->text();
+            ui->mem1->setText(presetText);
+            savePresetSettings(1, presetText);
+            returnRecallMode();
 
         }
         else
@@ -608,11 +647,21 @@ void MainWindow::onMem2Clicked()
     {
         if (isPresetMode)
         {
+
             QNetworkReply *reply = downLoadManager->get(QNetworkRequest(QUrl("http://" + currentCamIp + DOWNLOAD_FILE_URI)));
             downloadDestination[reply] = new QFile(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QString::asprintf("%s" , (DOWNLOAD_FILE_DEST_PREFIX)) + currentCamIp + QString::number(2) + ".jpg");
-            ui->mem2->setText(ui->presetText->text().left(10));
-            savePresetSettings(2);
             setPreset(2);
+            //newly added: 07/2019
+            bool ok;
+            QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
+                                                     tr("Preset #2 Name:"), QLineEdit::Normal,
+                                                    ui->mem2->text(), &ok);
+            if (!ok || presetText.isEmpty())
+                presetText = ui->mem2->text();
+            ui->mem2->setText(presetText);
+            savePresetSettings(2, presetText);
+            returnRecallMode();
+
         }
         else
         {
@@ -629,9 +678,18 @@ void MainWindow::onMem3Clicked()
         {
             QNetworkReply *reply = downLoadManager->get(QNetworkRequest(QUrl("http://" + currentCamIp + DOWNLOAD_FILE_URI)));
             downloadDestination[reply] = new QFile(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QString::asprintf("%s" , (DOWNLOAD_FILE_DEST_PREFIX)) + currentCamIp + QString::number(3) + ".jpg");
-            ui->mem3->setText(ui->presetText->text().left(10));
-            savePresetSettings(3);
-            setPreset(3);
+            //newly added: 07/2019
+            bool ok;
+            QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
+                                                     tr("Preset #3 Name:"), QLineEdit::Normal,
+                                                    ui->mem3->text(), &ok);
+            if (!ok || presetText.isEmpty())
+                presetText = ui->mem3->text();
+            ui->mem3->setText(presetText);
+            savePresetSettings(3 , presetText);
+
+            returnRecallMode();
+
         }
         else
         {
@@ -648,9 +706,19 @@ void MainWindow::onMem4Clicked()
         {
             QNetworkReply *reply = downLoadManager->get(QNetworkRequest(QUrl("http://" + currentCamIp + DOWNLOAD_FILE_URI)));
             downloadDestination[reply] = new QFile(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QString::asprintf("%s" , (DOWNLOAD_FILE_DEST_PREFIX)) + currentCamIp + QString::number(4) + ".jpg");
-            ui->mem4->setText(ui->presetText->text().left(10));
-            savePresetSettings(4);
             setPreset(4);
+            //newly added: 07/2019
+            bool ok;
+            QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
+                                                     tr("Preset #4 Name:"), QLineEdit::Normal,
+                                                    ui->mem1->text(), &ok);
+            if (!ok || presetText.isEmpty())
+                presetText = ui->mem4->text();
+            ui->mem4->setText(presetText);
+            savePresetSettings(4 , presetText);
+
+            returnRecallMode();
+
         }
         else
         {
@@ -667,9 +735,19 @@ void MainWindow::onMem5Clicked()
         {
             QNetworkReply *reply = downLoadManager->get(QNetworkRequest(QUrl("http://" + currentCamIp + DOWNLOAD_FILE_URI)));
             downloadDestination[reply] = new QFile(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QString::asprintf("%s" , (DOWNLOAD_FILE_DEST_PREFIX)) + currentCamIp + QString::number(5) + ".jpg");
-            ui->mem5->setText(ui->presetText->text().left(10));
-            savePresetSettings(5);
             setPreset(5);
+            //newly added: 07/2019
+            bool ok;
+            QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
+                                                     tr("Preset #5 Name:"), QLineEdit::Normal,
+                                                    ui->mem5->text(), &ok);
+            if (!ok || presetText.isEmpty())
+                presetText = ui->mem5->text();
+            ui->mem5->setText(presetText);
+            savePresetSettings(5 , presetText);
+
+            returnRecallMode();
+
         }
         else
         {
@@ -686,9 +764,19 @@ void MainWindow::onMem6Clicked()
         {
             QNetworkReply *reply = downLoadManager->get(QNetworkRequest(QUrl("http://" + currentCamIp + DOWNLOAD_FILE_URI)));
             downloadDestination[reply] = new QFile(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QString::asprintf("%s" , (DOWNLOAD_FILE_DEST_PREFIX)) + currentCamIp + QString::number(6) + ".jpg");
-            ui->mem6->setText(ui->presetText->text().left(10));
-            savePresetSettings(6);
             setPreset(6);
+            //newly added: 07/2019
+            bool ok;
+            QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
+                                                     tr("Preset #6 Name:"), QLineEdit::Normal,
+                                                    ui->mem6->text(), &ok);
+            if (!ok || presetText.isEmpty())
+                presetText = ui->mem6->text();
+            ui->mem6->setText(presetText);
+            savePresetSettings(6 , presetText);
+
+            returnRecallMode();
+
         }
         else
         {
@@ -703,9 +791,19 @@ void MainWindow::onMem7Clicked()
     {
         if (isPresetMode)
         {
-            ui->mem7->setText(ui->presetText->text().left(10));
-            savePresetSettings(7);
             setPreset(7);
+            //newly added: 07/2019
+            bool ok;
+            QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
+                                                     tr("Preset #7 Name:"), QLineEdit::Normal,
+                                                    ui->mem7->text(), &ok);
+            if (!ok || presetText.isEmpty())
+                presetText = ui->mem7->text();
+            ui->mem7->setText(presetText);
+            savePresetSettings(7 , presetText);
+
+            returnRecallMode();
+
         }
         else
         {
@@ -720,9 +818,19 @@ void MainWindow::onMem8Clicked()
     {
         if (isPresetMode)
         {
-            ui->mem8->setText(ui->presetText->text().left(10));
-            savePresetSettings(8);
             setPreset(8);
+            //newly added: 07/2019
+            bool ok;
+            QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
+                                                     tr("Preset #8 Name:"), QLineEdit::Normal,
+                                                    ui->mem8->text(), &ok);
+            if (!ok || presetText.isEmpty())
+                presetText = ui->mem8->text();
+            ui->mem8->setText(presetText);
+            savePresetSettings(8 , presetText);
+
+            returnRecallMode();
+
         }
         else
         {
@@ -735,9 +843,19 @@ void MainWindow::onMem9Clicked()
 {
     if (isPresetMode)
     {
-        ui->mem9->setText(ui->presetText->text().left(10));
-        savePresetSettings(9);
         setPreset(9);
+        //newly added: 07/2019
+        bool ok;
+        QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
+                                                 tr("Preset #9 Name:"), QLineEdit::Normal,
+                                                ui->mem9->text(), &ok);
+        if (!ok || presetText.isEmpty())
+            presetText = ui->mem9->text();
+        ui->mem9->setText(presetText);
+        savePresetSettings(9 , presetText);
+
+        returnRecallMode();
+
     }
     else
     {
@@ -761,6 +879,59 @@ void MainWindow::onAboutUsClicked()
 {
     showAboutUs();
 }
+//newly added 08/19
+void MainWindow::onPanTiltLimitSettingClicked()
+{
+    if(!isControllable)
+    {
+        showMessage("No camera connected");
+        return;
+    }
+    PanTiltLimitDlg panTiltLimitDlg(this);
+    panTiltLimitDlg.exec();
+}
+void MainWindow::onXboxHelpClicked()
+{
+    XBoxHelp xboxHelp;
+    xboxHelp.exec();
+}
+void MainWindow::onHotkeyHelpClicked()
+{
+    HotkeyHelp hotkeyHelp;
+    hotkeyHelp.exec();
+}
+void MainWindow::onFocusLockClicked()
+{
+    if(!isControllable)
+        return;
+    qDebug()<<"Focuslock";
+    if(!ui->lockFocus->isChecked())
+    {
+        focusLock(true);
+        ui->autoFocus->setEnabled(false);
+        ui->focusIn->setEnabled(false);
+        ui->focusOut->setEnabled(false);
+    }
+    else
+    {
+        focusLock(false);
+        ui->autoFocus->setEnabled(true);
+        ui->focusIn->setEnabled(!ui->autoFocus->isChecked());
+        ui->focusOut->setEnabled(!ui->autoFocus->isChecked());
+    }
+
+}
+QString MainWindow::getCurrentCameraIp()
+{
+    return currentCamIp;
+}
+bool MainWindow::getIsControllable()
+{
+    return isControllable;
+}
+
+
+
 void MainWindow::onMultiCameraClicked()
 {
     showMultiCameraSetting();
@@ -884,107 +1055,107 @@ void MainWindow::onCam8Clicked()
     connectHost(ip);
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *ev)
-{
-    if(ev->isAutoRepeat())
-        return;
-    int key = ev->key();
-    int panSpeed = ui->panSpeed->currentIndex() + 1;
-    int tiltSpeed = ui->tiltSpeed->currentIndex() + 1;
-    switch (key)
-    {
-    case Qt::Key_W:
-        if (isControllable)
-            moveTopOnce(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_Up:
-        if (isControllable)
-            moveTopOnce(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_S:
-        if (isControllable)
-            moveBottomOnce(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_Down:
-        if (isControllable)
-            moveBottomOnce(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_A:
-        if (isControllable)
-            moveLeftOnce(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_Left:
-        if (isControllable)
-            moveLeftOnce(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_D:
-        if (isControllable)
-            moveRightOnce(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_Right:
-        if (isControllable)
-            moveRightOnce(panSpeed, tiltSpeed);
-        break;
-    default:
-        break;
-    }
+//void MainWindow::keyPressEvent(QKeyEvent *ev)
+//{
+//    if(ev->isAutoRepeat())
+//        return;
+//    int key = ev->key();
+//    int panSpeed = ui->panSpeed->currentIndex() + 1;
+//    int tiltSpeed = ui->tiltSpeed->currentIndex() + 1;
+//    switch (key)
+//    {
+//    case Qt::Key_W:
+//        if (isControllable)
+//            moveTopOnce(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_Up:
+//        if (isControllable)
+//            moveTopOnce(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_S:
+//        if (isControllable)
+//            moveBottomOnce(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_Down:
+//        if (isControllable)
+//            moveBottomOnce(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_A:
+//        if (isControllable)
+//            moveLeftOnce(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_Left:
+//        if (isControllable)
+//            moveLeftOnce(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_D:
+//        if (isControllable)
+//            moveRightOnce(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_Right:
+//        if (isControllable)
+//            moveRightOnce(panSpeed, tiltSpeed);
+//        break;
+//    default:
+//        break;
+//    }
 
-}
-void MainWindow::keyReleaseEvent(QKeyEvent *ev)
-{
-    if(ev->isAutoRepeat())
-        return;
-    int key = ev->key();
-    int panSpeed = ui->panSpeed->currentIndex() + 1;
-    int tiltSpeed = ui->tiltSpeed->currentIndex() + 1;
-    switch (key)
-    {
-    case Qt::Key_W:
-        if (isControllable)
-            stopMoving(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_Up:
-        if (isControllable)
-            stopMoving(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_S:
-        if (isControllable)
-            stopMoving(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_Down:
-        if (isControllable)
-            stopMoving(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_A:
-        if (isControllable)
-            stopMoving(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_Left:
-        if (isControllable)
-            stopMoving(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_D:
-        if (isControllable)
-            stopMoving(panSpeed, tiltSpeed);
-    case Qt::Key_Right:
-        if (isControllable)
-            stopMoving(panSpeed, tiltSpeed);
-        break;
-    case Qt::Key_1:
-    case Qt::Key_2:
-    case Qt::Key_3:
-    case Qt::Key_4:
-    case Qt::Key_5:
-    case Qt::Key_6:
-    case Qt::Key_7:
-    case Qt::Key_8:
-    case Qt::Key_9:
-        if(settings->value(SETTING_HOTKEY_AVAILABLE , false).toBool())
-            onCallPreset(key - 0x30);
-    default:
-        break;
-    }
-}
+//}
+//void MainWindow::keyReleaseEvent(QKeyEvent *ev)
+//{
+//    if(ev->isAutoRepeat())
+//        return;
+//    int key = ev->key();
+//    int panSpeed = ui->panSpeed->currentIndex() + 1;
+//    int tiltSpeed = ui->tiltSpeed->currentIndex() + 1;
+//    switch (key)
+//    {
+//    case Qt::Key_W:
+//        if (isControllable)
+//            stopMoving(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_Up:
+//        if (isControllable)
+//            stopMoving(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_S:
+//        if (isControllable)
+//            stopMoving(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_Down:
+//        if (isControllable)
+//            stopMoving(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_A:
+//        if (isControllable)
+//            stopMoving(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_Left:
+//        if (isControllable)
+//            stopMoving(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_D:
+//        if (isControllable)
+//            stopMoving(panSpeed, tiltSpeed);
+//    case Qt::Key_Right:
+//        if (isControllable)
+//            stopMoving(panSpeed, tiltSpeed);
+//        break;
+//    case Qt::Key_1:
+//    case Qt::Key_2:
+//    case Qt::Key_3:
+//    case Qt::Key_4:
+//    case Qt::Key_5:
+//    case Qt::Key_6:
+//    case Qt::Key_7:
+//    case Qt::Key_8:
+//    case Qt::Key_9:
+//        if(settings->value(SETTING_HOTKEY_AVAILABLE , false).toBool())
+//            onCallPreset(key - 0x30);
+//    default:
+//        break;
+//    }
+//}
 
 void MainWindow::onReadyRead()
 {
@@ -1274,11 +1445,6 @@ void MainWindow::onSpeedByZoomClicked()
     if(isControllable)
         speedByZoom();
 }
-void MainWindow::onFocusLockClicked()
-{
-    if(isControllable)
-        focusLock();
-}
 void MainWindow::onMorePresetBtnClicked()
 {
     //    if (isControllable)
@@ -1467,8 +1633,12 @@ void MainWindow::loadSettings(QString curIp){
 
 }
 //newly added
-void MainWindow::savePresetSettings(int presetNum)
+void MainWindow::savePresetSettings(int presetNum, QString presetText)
 {
+    settings->setValue(QString::asprintf("mem%d", presetNum) + currentCamIp, presetText);
+
+    if(!ui->storeExposure->isChecked())
+        return;
     settings->setValue(currentCamIp + "_" + QString::number(presetNum) + "_aemode" , ui->aeModeSelect->currentIndex());
     settings->setValue(currentCamIp + "_" + QString::number(presetNum) + "_shutterspeed" , ui->shutterCombo->currentIndex());
     settings->setValue(currentCamIp + "_" + QString::number(presetNum) + "_iris" , ui->irisCombo->currentIndex());
@@ -1484,6 +1654,8 @@ void MainWindow::loadPresetSettings(int presetNum , int loadingStep)
     //if we call following commands at the same time, it does not work well.
     //we should call it one by one.
     //asynchronously
+    if(!ui->storeExposure->isChecked())
+        return;
     switch(loadingStep)
     {
     case 0:
@@ -1568,21 +1740,99 @@ void MainWindow::initConnection()
     //    ui->focusLock->setChecked(true);
     //    focusLock();
 }
-void MainWindow::focusLock()
+void MainWindow::focusLock(bool lock)
 {
-    //81 0a 04 68 02 FF
-    //81 0a 04 68 03 FF
-    //    char command[6];
-    //    command[0] = 0x81;
-    //    command[1] = 0x0a;
-    //    command[2] = 0x04;
-    //    command[3] = 0x68;
-    //    if(ui->focusLock->isChecked())
-    //        command[4] = 0x02;
-    //    else
-    //        command[4] = 0x03;
-    //    command[5] = 0xff;
-    //    addToQue(command , 6);
+    //81 0a 04 68 02 FF//lock 02 unlock 03
+    char command[6];
+    command[0] = 0x81;
+    command[1] = 0x0a;
+    command[2] = 0x04;
+    command[3] = 0x68;
+    if(lock)
+        command[4] = 02;
+    else
+        command[4] = 03;
+    command[5] = 0xff;
+    addToQue(command , 6 , Command);
+}
+void MainWindow::setPanTiltLimit(int panLeftLimit, int panRightLimit, int tiltDownLimit, int tiltUpLimit)
+{
+    //    81 01 06 07 00 0W 0Y 0Y 0Y 0Y 0Z 0Z 0Z 0Z FF
+    //    W: 1 UpRight, 0: DownLeft
+    //    YYYY: Pan Limit Position | F670 (left) to 0990 (right)
+    //    ZZZZ: Tilt Limit Position | FAFO (down) to 0510 (up)
+        //following code is very correct do not change
+        char command[15];
+        command[0] = 0x81;
+        command[1] = 0x01;
+        command[2] = 0x06;
+        command[3] = 0x07;
+        command[4] = 0x00;
+        command[5] = 0x01;
+        command[6] = (panRightLimit >> 12) % 16;
+        command[7] = ((panRightLimit << 4) >> 12) % 16;
+        command[8] = ((panRightLimit << 8) >> 12) % 16;
+        command[9] = ((panRightLimit << 12) >> 12) % 16;
+        command[10] = (tiltUpLimit >> 12) % 16;
+        command[11] = ((tiltUpLimit << 4) >> 12) % 16;
+        command[12] = ((tiltUpLimit << 8) >> 12) % 16;
+        command[13] = ((tiltUpLimit << 12) >> 12) % 16;
+        command[14] = 0xff;
+        addToQue(command , 15 , Command);
+
+        char command1[15];
+        command1[0] = 0x81;
+        command1[1] = 0x01;
+        command1[2] = 0x06;
+        command1[3] = 0x07;
+        command1[4] = 0x00;
+        command1[5] = 0x00;
+        command1[6] = (panLeftLimit >> 12) % 16;
+        command1[7] = ((panLeftLimit << 4) >> 12) % 16;
+        command1[8] = ((panLeftLimit << 8) >> 12) % 16;
+        command1[9] = ((panLeftLimit << 12) >> 12) % 16;
+        command1[10] = (tiltDownLimit >> 12) % 16;
+        command1[11] = ((tiltDownLimit << 4) >> 12) % 16;
+        command1[12] = ((tiltDownLimit << 8) >> 12) % 16;
+        command1[13] = ((tiltDownLimit << 12) >> 12) % 16;
+        command1[14] = 0xff;
+        addToQue(command1, 15, Command);
+}
+void MainWindow::clearLimits(bool upright)
+{
+    char command[15];
+    command[0] = 0x81;
+    command[1] = 0x01;
+    command[2] = 0x06;
+    command[3] = 0x07;
+    command[4] = 0x01;
+    if(upright)
+        command[5] = 0x01;
+    else
+        command[5] = 0x00;
+    command[6] = 0x07;
+    command[7] = 0x0f;
+    command[8] = 0x0f;
+    command[9] = 0x0f;
+    command[10] = 0x07;
+    command[11] = 0x0f;
+    command[12] = 0x0f;
+    command[13] = 0x0f;
+    command[14] = 0xff;
+    addToQue(command , 15 , Command);
+}
+void MainWindow::setCallPresetSpeed(int speed)
+{
+    //81 01 06 01 pp FF
+    speed = speed % 0x18 + 1;
+    char command[6];
+    command[0] = 0x81;
+    command[1] = 0x01;
+    command[2] = 0x06;
+    command[3] = 0x01;
+    command[4] = (char)speed;
+    command[5] = 0xff;
+    addToQue(command , 6 , Command);
 }
 void MainWindow::speedByZoom()
 {
@@ -2005,8 +2255,6 @@ void MainWindow::setPreset(int index)
     }
     else
     {
-
-        settings->setValue(QString::asprintf("mem%d", index) + currentCamIp, ui->presetText->text().left(10));
         char command[7];
         command[0] = 0x81;
         command[1] = 0x01;
@@ -2019,8 +2267,7 @@ void MainWindow::setPreset(int index)
 
     }
 
-    isPresetMode = false;
-    ui->recallMode->setChecked(true);
+    returnRecallMode();
 }
 void MainWindow::recallPreset(int index)
 {
@@ -2780,12 +3027,12 @@ void MainWindow::showCompactView()
 
         ui->rightPanel->hide();
         //status bar components
-        shutterStatus->hide();
-        irisStatus->hide();
-        brightStatus->hide();
-        luminanceStatus->hide();
-        contrastStatus->hide();
-        hueStatus->hide();
+//        shutterStatus->hide();
+//        irisStatus->hide();
+//        brightStatus->hide();
+//        luminanceStatus->hide();
+//        contrastStatus->hide();
+//        hueStatus->hide();
 
 
         this->setWindowSize(this->width() - initialWidth / 2 , this->height());
@@ -2818,12 +3065,12 @@ void MainWindow::showAdvancedView()
 
         ui->rightPanel->show();
         //status bar components
-        shutterStatus->show();
-        irisStatus->show();
-        brightStatus->show();
-        luminanceStatus->show();
-        contrastStatus->show();
-        hueStatus->show();
+//        shutterStatus->show();
+//        irisStatus->show();
+//        brightStatus->show();
+//        luminanceStatus->show();
+//        contrastStatus->show();
+//        hueStatus->show();
 
 
         this->setWindowSize(this->width() + initialWidth / 2 , this->height());
@@ -3115,18 +3362,18 @@ void MainWindow::moveToNextCommand()
 void MainWindow::displayStatus()
 {
     //status...
-    panStatus->setText(QString::asprintf("Pan:%x%x%x%x", panPos[0], panPos[1], panPos[2], panPos[3]));
-    tiltStatus->setText(QString::asprintf("Tilt:%x%x%x%x", tiltPos[0], tiltPos[1], tiltPos[2], tiltPos[3]));
-    zoomStatus->setText(QString::asprintf("Zoom:%x%x%x%x", zoomLevel[0], zoomLevel[1], zoomLevel[2], zoomLevel[3]));
-    focusStatus->setText(QString::asprintf("Focus:%x%x%x%x", focusLevel[0], focusLevel[1], focusLevel[2], focusLevel[3]));
-    irisStatus->setText("Iris:" + irises[(unsigned char)irisLevel]);
+//    panStatus->setText(QString::asprintf("Pan:%x%x%x%x", panPos[0], panPos[1], panPos[2], panPos[3]));
+//    tiltStatus->setText(QString::asprintf("Tilt:%x%x%x%x", tiltPos[0], tiltPos[1], tiltPos[2], tiltPos[3]));
+//    zoomStatus->setText(QString::asprintf("Zoom:%x%x%x%x", zoomLevel[0], zoomLevel[1], zoomLevel[2], zoomLevel[3]));
+//    focusStatus->setText(QString::asprintf("Focus:%x%x%x%x", focusLevel[0], focusLevel[1], focusLevel[2], focusLevel[3]));
+//    irisStatus->setText("Iris:" + irises[(unsigned char)irisLevel]);
     if(shutterLevel == 0)
         shutterLevel = 1;
-    shutterStatus->setText("Shutter:" + shutters[(unsigned char)shutterLevel - 1]);//we should set shutterlevel's initiative value as 1
-    brightStatus->setText("Bright:" + QString::number((unsigned char)brightLevel));
-    luminanceStatus->setText("Luminance:" + QString::number((unsigned char)luminanceLevel));
-    contrastStatus->setText("Contrast:" + QString::number((unsigned char)contrastLevel));
-    hueStatus->setText("Hue:" + QString::number((unsigned char)hueLevel));
+//    shutterStatus->setText("Shutter:" + shutters[(unsigned char)shutterLevel - 1]);//we should set shutterlevel's initiative value as 1
+//    brightStatus->setText("Bright:" + QString::number((unsigned char)brightLevel));
+//    luminanceStatus->setText("Luminance:" + QString::number((unsigned char)luminanceLevel));
+//    contrastStatus->setText("Contrast:" + QString::number((unsigned char)contrastLevel));
+//    hueStatus->setText("Hue:" + QString::number((unsigned char)hueLevel));
 //    rGainStatus->setText("R Gain:" + QString::number((unsigned char)rGain));
 //    bGainStatus->setText("B Gain:" + QString::number((unsigned char)bGain));
 
@@ -3232,3 +3479,40 @@ void MainWindow::onCallPreset(int presetNum)
         loadPresetSettings(presetNum , 0);
     }
 }
+void MainWindow::returnRecallMode()
+{
+    isPresetMode = false;
+    ui->recallMode->setChecked(true);
+}
+QSettings *MainWindow::getAppSettings()
+{
+    return settings;
+}
+void MainWindow::sendDevNameRequest()
+{
+    if(isControllable)
+        devNameGetter->get(QNetworkRequest(QUrl("http://" + currentCamIp + "/cgi-bin/param.cgi?get_device_conf")));
+}
+void MainWindow::onGetName(QNetworkReply *reply)
+{
+    if(reply->error())
+    {
+        reply->deleteLater();
+        return;
+    }
+    QString devName = processReply(reply->readAll());
+    devNameLabel->setText(devName.replace("\"", ""));
+}
+QString MainWindow::processReply(QString str)
+{
+    QString temp = str;
+    QStringList strList = temp.split('\n');
+    if(strList.length() > 0)
+    {
+        temp = strList.at(0);
+        if(temp.length() > 10)
+            temp = temp.mid(10);
+    }
+    return temp;
+}
+

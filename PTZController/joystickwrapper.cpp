@@ -99,9 +99,9 @@ void JoystickWrapper::joystickAxisChanged(const int js , const int axis , const 
 
         case 1://TL
             if(value > STICK_THRESHOULD)
-                emit switchCamera(1);
-            else if(value < - STICK_THRESHOULD)
                 emit switchCamera(3);
+            else if(value < - STICK_THRESHOULD)
+                emit switchCamera(1);
             break;
 
         case 0://TL

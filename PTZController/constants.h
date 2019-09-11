@@ -10,6 +10,8 @@
 
 #define PREVIEW_WIDTH 658
 
+#define PANTILTLIMITMIN 0
+#define PANTILTLIMITMAX 32767
 
 
 #define DEFAULT_SETTINGS_PATH "/ptzoptics-controller/settings.ini"

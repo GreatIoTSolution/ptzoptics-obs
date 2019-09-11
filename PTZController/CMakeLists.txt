@@ -35,6 +35,10 @@ set(PTHREAD_LIB "PTHREAD_LIB-NOTFOUND" CACHE FILEPATH "PTHREAD library")
 	endif()
 
 set(ptzcontroller_SOURCES
+    helpwin.cpp
+    hotkeyhelp.cpp
+    xboxhelp.cpp
+    pantiltlimitdlg.cpp
 	PTZController.cpp
 	mainwindow.cpp
 	multicameras.cpp
@@ -47,6 +51,10 @@ set(ptzcontroller_SOURCES
 	)
 
 set(ptzcontroller_HEADERS
+    helpwin.h
+    hotkeyhelp.h
+    xboxhelp.h
+    pantiltlimitdlg.h
 	PTZController.h
 	mainwindow.h
 	multicameras.h

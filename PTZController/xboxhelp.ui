@@ -1,29 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>AboutUs</class>
- <widget class="QDialog" name="AboutUs">
+ <class>XBoxHelp</class>
+ <widget class="QDialog" name="XBoxHelp">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>695</width>
-    <height>235</height>
+    <width>618</width>
+    <height>738</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>0</width>
-    <height>0</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>16777215</width>
-    <height>16777215</height>
+    <width>618</width>
+    <height>738</height>
    </size>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Xbox Help</string>
   </property>
   <property name="styleSheet">
    <string notr="true">QToolTip{
@@ -117,43 +111,14 @@ QLabel{
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="label_2">
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
-     </property>
+    <widget class="QLabel" name="label">
      <property name="styleSheet">
       <string notr="true">QLabel{
-	image : url(':/ptzoptics-assets/img/ptzoptics1.png');
+image: url(:/ptzoptics-assets/img/xbox.png);
 }</string>
      </property>
      <property name="text">
       <string/>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="label">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Program: PTZOptics Camera Control Pane
-Available for PC, Mac and OBS (Open Broadcaster Software) as a plugin.
-These features are currently in BETA and could revert back to the original OSD menu settings. Please use at your own risk. For permanent camera settings please use the OSD Menu.
-Shown as pop up information for
-- Exposure
-- Image/Color
-- White Balance</string>
-     </property>
-     <property name="textFormat">
-      <enum>Qt::AutoText</enum>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
      </property>
     </widget>
    </item>
