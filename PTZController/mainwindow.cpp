@@ -678,6 +678,7 @@ void MainWindow::onMem3Clicked()
         {
             QNetworkReply *reply = downLoadManager->get(QNetworkRequest(QUrl("http://" + currentCamIp + DOWNLOAD_FILE_URI)));
             downloadDestination[reply] = new QFile(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QString::asprintf("%s" , (DOWNLOAD_FILE_DEST_PREFIX)) + currentCamIp + QString::number(3) + ".jpg");
+            setPreset(3);
             //newly added: 07/2019
             bool ok;
             QString presetText = QInputDialog::getText(nullptr, tr("PTZOptics"),
